@@ -1,2 +1,2 @@
-# VirtualDesktop.VRCFaceTracking
-VRCFaceTracking module for Virtual Desktop
+# VirtualDesktop.VRCFaceTracking SableVII Tweaks
+VRCFaceTracking module for Virtual Desktop along with SableVII's Tweaks
