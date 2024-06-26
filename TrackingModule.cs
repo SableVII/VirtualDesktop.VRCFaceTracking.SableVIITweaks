@@ -39,11 +39,11 @@ namespace VirtualDesktop.FaceTracking
                     _isTracking = value;
                     if ((bool)value)
                     {
-                        Logger.LogInformation("[VirtualDesktop] Tracking is now active!");
+                        Logger.LogInformation("[VirtualDesktopSableVII] Tracking is now active!");
                     }
                     else
                     {
-                        Logger.LogWarning("[VirtualDesktop] Tracking is not active. Make sure you are connected to your computer, a VR game or SteamVR is launched and 'Forward tracking data' is enabled in the Streaming tab.");
+                        Logger.LogWarning("[VirtualDesktopSableVII] Tracking is not active. Make sure you are connected to your computer, a VR game or SteamVR is launched and 'Forward tracking data' is enabled in the Streaming tab.");
                     }
                 }
             }
@@ -55,7 +55,7 @@ namespace VirtualDesktop.FaceTracking
 
         public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
         {
-            ModuleInformation.Name = "Virtual Desktop";
+            ModuleInformation.Name = "Virtual Desktop SableVII's Tweaks";
 
             var stream = GetType().Assembly.GetManifestResourceStream("VirtualDesktop.FaceTracking.Resources.Logo256.png");
             if (stream != null)
@@ -77,7 +77,7 @@ namespace VirtualDesktop.FaceTracking
             }
             catch
             {
-                Logger.LogError("[VirtualDesktop] Failed to open MemoryMappedFile. Make sure the Virtual Desktop Streamer (v1.30 or later) is running.");
+                Logger.LogError("[VirtualDesktopSableVII] Failed to open MemoryMappedFile. Make sure the Virtual Desktop Streamer (v1.30 or later) is running.");
                 return (false, false);
             }
 
@@ -153,13 +153,18 @@ namespace VirtualDesktop.FaceTracking
                 if (faceState->IsEyeFollowingBlendshapesValid)
                 {
                     UpdateEyeExpressions(UnifiedTracking.Data.Shapes, expressions);
-                    isTracking = true;
+                    isTracking = true;           
                 }
 
                 if (faceState->FaceIsValid)
                 {
                     UpdateMouthExpressions(UnifiedTracking.Data.Shapes, expressions);
                     isTracking = true;
+                }
+
+                if (isTracking)
+                {
+                    SableVIITweaks.Tweak(this, UnifiedTracking.Data.Shapes, UnifiedTracking.Data.Eye);
                 }
             }
 
