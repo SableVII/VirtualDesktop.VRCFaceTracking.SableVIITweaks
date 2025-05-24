@@ -169,7 +169,7 @@ namespace VirtualDesktop.FaceTracking
 
                 if (isTracking)
                 {
-                    SableVIITweaks.Tweak(this, UnifiedTracking.Data.Shapes, UnifiedTracking.Data.Eye);
+                    SableVIITweaks.PostTweak(this, UnifiedTracking.Data.Shapes, UnifiedTracking.Data.Eye);
                 }
             }
             IsTracking = isTracking;
@@ -185,6 +185,8 @@ namespace VirtualDesktop.FaceTracking
             eye.Right.Openness =
                 1.0f - (float)Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedR]
                 + expressions[(int)Expressions.CheekRaiserR] * expressions[(int)Expressions.LidTightenerR]));
+
+            SableVIITweaks.TweakEyeOpenness(eye, expressions);
 
             #endregion
 

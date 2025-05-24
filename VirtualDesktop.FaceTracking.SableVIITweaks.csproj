@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Logo256.png" />
+    <EmbeddedResource Include="Resources\ByLuckCapsuleCommByJapes.jpeg" />
   </ItemGroup>
 
   <ItemGroup>
