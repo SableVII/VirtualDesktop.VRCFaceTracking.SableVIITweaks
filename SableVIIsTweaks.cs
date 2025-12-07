@@ -23,19 +23,22 @@ public unsafe class SableVIITweaks
 
 
     private static float _eyeOpenessNeutral = 0.75f;
-    private static float _eyeOpenessMinLimit = 0.1f;
+    private static float _eyeOpenessMinLimit = 0.15f;
     private static float _closenessRange = _eyeOpenessNeutral - _eyeOpenessMinLimit;
     // How much squinting affects the amount of Eye Openess
-    private static float _squintCloseRatio = 0.775f;
+    private static float _squintCloseRatio = 0.725f;
 
     private static Stopwatch _deltaTimeStopwatch = new Stopwatch();
 
     // In miliseconds the time it takes for a forced blink to let go
-    private static long _blinkTime = 75;
+    private static long _blinkTime = 55;
     private static bool _awaitingLeftEyeBlink = false;
     private static long _leftEyeBlinkTimer = 0;
     private static bool _awaitingRightEyeBlink = false;
     private static long _rightEyeBlinkTimer = 0;
+
+    private static float _minLeftEyeOpeness = 0.17f;
+    private static float _minRightEyeOpeness = 0.17f;
 
     #endregion
 
@@ -79,7 +82,7 @@ public unsafe class SableVIITweaks
         //eyeData.Right.Gaze = new Vector2(float.Clamp(eyeData.Right.Gaze.x, EyeRightGazeLimitX.x, EyeRightGazeLimitX.y), float.Clamp(eyeData.Right.Gaze.y, EyeRightGazeLimitY.x, EyeRightGazeLimitY.y));
 
         // Testing Anti-frog-eye stuff
-        if (Math.Abs(eyeData.Left.Openness - eyeData.Right.Openness) < 0.3)
+        if (Math.Abs(eyeData.Left.Openness - eyeData.Right.Openness) < 0.335)
         {
             float average = (eyeData.Left.Openness + eyeData.Right.Openness) / 2.0f;
             eyeData.Left.Openness = average;
@@ -106,7 +109,7 @@ public unsafe class SableVIITweaks
                 eyeData.Left.Openness = 0.0f;
             }
         }
-        if (_awaitingLeftEyeBlink == false && eyeData.Left.Openness <= 0.25f)
+        if (_awaitingLeftEyeBlink == false && eyeData.Left.Openness <= _minLeftEyeOpeness)
         {
             _awaitingLeftEyeBlink = true;
         }
@@ -128,19 +131,19 @@ public unsafe class SableVIITweaks
                 eyeData.Right.Openness = 0.0f;
             }
         }
-        if (_awaitingRightEyeBlink == false && eyeData.Right.Openness <= 0.25f)
+        if (_awaitingRightEyeBlink == false && eyeData.Right.Openness <= _minRightEyeOpeness)
         {
             _awaitingRightEyeBlink = true;
         }
 
         // Force full left blink when threshold is passed
-        if (eyeData.Left.Openness < 0.25f)
+        if (eyeData.Left.Openness < _minLeftEyeOpeness)
         {
             eyeData.Left.Openness = 0.0f;
         }
 
         // Force full right blink when threshold is passed
-        if (eyeData.Right.Openness < 0.25f)
+        if (eyeData.Right.Openness < _minRightEyeOpeness)
         {
             eyeData.Right.Openness = 0.0f;
         }
