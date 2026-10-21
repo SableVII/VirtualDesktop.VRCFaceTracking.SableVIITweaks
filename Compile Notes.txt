@@ -1,1 +1,2 @@
-Just place the created .dll into the 'C:\Users\Sable\AppData\Roaming\VRCFaceTracking' folder
+Command -> dotnet: build
+Just place the created .dll into the 'C:\Users\Sable\AppData\Roaming\VRCFaceTracking\CustomLibs' folder

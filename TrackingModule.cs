@@ -39,11 +39,11 @@ namespace VirtualDesktop.FaceTracking
                     _isTracking = value;
                     if ((bool)value)
                     {
-                        Logger.LogInformation("[VirtualDesktop] Tracking is now active!");
+                        Logger.LogInformation("[VirtualDesktopSableVII] Tracking is now active!");
                     }
                     else
                     {
-                        Logger.LogWarning("[VirtualDesktop] Tracking is not active. Make sure you are connected to your computer, 'Forward tracking data to PC' is checked in the Streaming tab and that a VR game or SteamVR is launched.");
+                        Logger.LogWarning("[VirtualDesktopSableVII] Tracking is not active. Make sure you are connected to your computer, 'Forward tracking data to PC' is checked in the Streaming tab and that a VR game or SteamVR is launched.");
                     }
                 }
             }
@@ -55,7 +55,7 @@ namespace VirtualDesktop.FaceTracking
 
         public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
         {
-            ModuleInformation.Name = "Virtual Desktop";
+            ModuleInformation.Name = "Virtual Desktop SableVII's Tweaks";
 
             var stream = GetType().Assembly.GetManifestResourceStream("VirtualDesktop.FaceTracking.Resources.Logo256.png");
             if (stream != null)
@@ -77,7 +77,7 @@ namespace VirtualDesktop.FaceTracking
             }
             catch
             {
-                Logger.LogError("[VirtualDesktop] Failed to open MemoryMappedFile. Make sure the Virtual Desktop Streamer (v1.30 or later) is running.");
+                Logger.LogError("[VirtualDesktopSableVII] Failed to open MemoryMappedFile. Make sure the Virtual Desktop Streamer (v1.30 or later) is running.");
                 return (false, false);
             }
 
@@ -147,7 +147,7 @@ namespace VirtualDesktop.FaceTracking
                 {                    
                     var leftEyePose = faceState->LeftEyePose;
                     var rightEyePose = faceState->RightEyePose;
-                    UpdateEyeData(UnifiedTracking.Data.Eye, leftEyePose.Orientation, rightEyePose.Orientation);
+                    UpdateEyeData(UnifiedTracking.Data.Eye, leftEyePose.Orientation, rightEyePose.Orientation, expressions);
                     isTracking = true;
                 }
 
@@ -159,6 +159,7 @@ namespace VirtualDesktop.FaceTracking
 
                 if (_expressionAvailable && (faceState->FaceFlags & 0b0001) != 0)
                 {
+                    SableVIITweaks.PostTweak(this, UnifiedTracking.Data.Shapes, UnifiedTracking.Data.Eye);
                     UpdateMouthExpressions(UnifiedTracking.Data.Shapes, expressions, faceState->FaceFlags);
                     isTracking = true;
                 }
@@ -166,7 +167,7 @@ namespace VirtualDesktop.FaceTracking
             IsTracking = isTracking;
         }
 
-        private void UpdateEyeData(UnifiedEyeData eye, Quaternion orientationL, Quaternion orientationR)
+        private void UpdateEyeData(UnifiedEyeData eye, Quaternion orientationL, Quaternion orientationR, float* expressions)
         {
             #region Eye Data to UnifiedEye
 
@@ -180,6 +181,8 @@ namespace VirtualDesktop.FaceTracking
             // Force the normalization values of Dilation to fit avg. pupil values.
             eye._minDilation = 0;
             eye._maxDilation = 10;
+
+            SableVIITweaks.TweakEyeOpenness(eye, expressions);
 
             #endregion
         }
