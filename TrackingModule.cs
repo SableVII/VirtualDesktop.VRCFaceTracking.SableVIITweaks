@@ -3,16 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
-using System.Linq.Expressions;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using VRCFaceTracking;
 using VRCFaceTracking.Core.Library;
 using VRCFaceTracking.Core.Params.Data;
 using VRCFaceTracking.Core.Params.Expressions;
-using VRCFaceTracking.Core.Types;
-using Vector2 = VRCFaceTracking.Core.Types.Vector2;
 
 namespace VirtualDesktop.FaceTracking
 {
@@ -43,11 +39,11 @@ namespace VirtualDesktop.FaceTracking
                     _isTracking = value;
                     if ((bool)value)
                     {
-                        Logger.LogInformation("[VirtualDesktopSableVII] Tracking is now active!");
+                        Logger.LogInformation("[VirtualDesktop] Tracking is now active!");
                     }
                     else
                     {
-                        Logger.LogWarning("[VirtualDesktopSableVII] Tracking is not active. Make sure you are connected to your computer, a VR game or SteamVR is launched and 'Forward tracking data' is enabled in the Streaming tab.");
+                        Logger.LogWarning("[VirtualDesktop] Tracking is not active. Make sure you are connected to your computer, 'Forward tracking data to PC' is checked in the Streaming tab and that a VR game or SteamVR is launched.");
                     }
                 }
             }
@@ -59,7 +55,7 @@ namespace VirtualDesktop.FaceTracking
 
         public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
         {
-            ModuleInformation.Name = "Virtual Desktop SableVII's Tweaks";
+            ModuleInformation.Name = "Virtual Desktop";
 
             var stream = GetType().Assembly.GetManifestResourceStream("VirtualDesktop.FaceTracking.Resources.Logo256.png");
             if (stream != null)
@@ -81,7 +77,7 @@ namespace VirtualDesktop.FaceTracking
             }
             catch
             {
-                Logger.LogError("[VirtualDesktopSableVII] Failed to open MemoryMappedFile. Make sure the Virtual Desktop Streamer (v1.30 or later) is running.");
+                Logger.LogError("[VirtualDesktop] Failed to open MemoryMappedFile. Make sure the Virtual Desktop Streamer (v1.30 or later) is running.");
                 return (false, false);
             }
 
@@ -100,7 +96,7 @@ namespace VirtualDesktop.FaceTracking
                 else
                 {
                     var faceState = _faceState;
-                    IsTracking = faceState != null && (faceState->LeftEyeIsValid || faceState->RightEyeIsValid || faceState->IsEyeFollowingBlendshapesValid || faceState->FaceIsValid);
+                    IsTracking = faceState != null && (faceState->LeftEyeIsValid || faceState->RightEyeIsValid || faceState->IsEyeFollowingBlendshapesValid || (faceState->FaceFlags & 0b0001) != 0);
                 }
             }
             else
@@ -151,45 +147,27 @@ namespace VirtualDesktop.FaceTracking
                 {                    
                     var leftEyePose = faceState->LeftEyePose;
                     var rightEyePose = faceState->RightEyePose;
-                    UpdateEyeData(UnifiedTracking.Data.Eye, expressions, leftEyePose.Orientation, rightEyePose.Orientation);
+                    UpdateEyeData(UnifiedTracking.Data.Eye, leftEyePose.Orientation, rightEyePose.Orientation);
                     isTracking = true;
                 }
 
                 if (_eyeAvailable && faceState->IsEyeFollowingBlendshapesValid)
                 {
-                    UpdateEyeExpressions(UnifiedTracking.Data.Shapes, expressions);
-                    isTracking = true;           
-                }
-
-                if (_expressionAvailable && faceState->FaceIsValid)
-                {
-                    UpdateMouthExpressions(UnifiedTracking.Data.Shapes, expressions);
+                    UpdateEyeExpressions(UnifiedTracking.Data.Eye, UnifiedTracking.Data.Shapes, expressions);
                     isTracking = true;
                 }
 
-                if (isTracking)
+                if (_expressionAvailable && (faceState->FaceFlags & 0b0001) != 0)
                 {
-                    SableVIITweaks.PostTweak(this, UnifiedTracking.Data.Shapes, UnifiedTracking.Data.Eye);
+                    UpdateMouthExpressions(UnifiedTracking.Data.Shapes, expressions, faceState->FaceFlags);
+                    isTracking = true;
                 }
             }
             IsTracking = isTracking;
         }
 
-        private void UpdateEyeData(UnifiedEyeData eye, float* expressions, Quaternion orientationL, Quaternion orientationR)
+        private void UpdateEyeData(UnifiedEyeData eye, Quaternion orientationL, Quaternion orientationR)
         {
-            #region Eye Openness parsing
-
-            eye.Left.Openness = 
-                1.0f - (float)Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedL]
-                + expressions[(int)Expressions.CheekRaiserL] * expressions[(int)Expressions.LidTightenerL]));
-            eye.Right.Openness =
-                1.0f - (float)Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedR]
-                + expressions[(int)Expressions.CheekRaiserR] * expressions[(int)Expressions.LidTightenerR]));
-
-            SableVIITweaks.TweakEyeOpenness(eye, expressions);
-
-            #endregion
-
             #region Eye Data to UnifiedEye
 
             eye.Right.Gaze = orientationR.Cartesian();
@@ -206,8 +184,23 @@ namespace VirtualDesktop.FaceTracking
             #endregion
         }
 
-        private void UpdateEyeExpressions(UnifiedExpressionShape[] unifiedExpressions, float* expressions)
+        private void UpdateEyeExpressions(UnifiedEyeData eye, UnifiedExpressionShape[] unifiedExpressions, float* expressions)
         {
+            #region Eye Openness parsing
+
+            eye.Left.Openness = 1f - Math.Clamp
+            (
+                expressions[(int)Expressions.EyesClosedL] + expressions[(int)Expressions.EyesClosedL] * expressions[(int)Expressions.LidTightenerL],
+                0f, 1f
+            );
+            eye.Right.Openness = 1f - Math.Clamp
+            (
+                expressions[(int)Expressions.EyesClosedR] + expressions[(int)Expressions.EyesClosedR] * expressions[(int)Expressions.LidTightenerR],
+                0f, 1f
+            );
+
+            #endregion
+
             // Eye Expressions Set
             unifiedExpressions[(int)UnifiedExpressions.EyeWideLeft].Weight = expressions[(int)Expressions.UpperLidRaiserL];
             unifiedExpressions[(int)UnifiedExpressions.EyeWideRight].Weight = expressions[(int)Expressions.UpperLidRaiserR];
@@ -227,7 +220,7 @@ namespace VirtualDesktop.FaceTracking
             unifiedExpressions[(int)UnifiedExpressions.BrowLowererRight].Weight = expressions[(int)Expressions.BrowLowererR];
         }
 
-        private void UpdateMouthExpressions(UnifiedExpressionShape[] unifiedExpressions, float* expressions)
+        private void UpdateMouthExpressions(UnifiedExpressionShape[] unifiedExpressions, float* expressions, byte faceFlags)
         {
             // Jaw Expression Set                        
             unifiedExpressions[(int)UnifiedExpressions.JawOpen].Weight = expressions[(int)Expressions.JawDrop];
@@ -303,8 +296,19 @@ namespace VirtualDesktop.FaceTracking
 
             // Tongue Expression Set   
             // Future placeholder
-            unifiedExpressions[(int)UnifiedExpressions.TongueOut].Weight = expressions[(int)Expressions.TongueOut];
-            unifiedExpressions[(int)UnifiedExpressions.TongueCurlUp].Weight = expressions[(int)Expressions.TongueTipAlveolar];
+            if ((faceFlags & 0b0010) != 0)
+            {
+                unifiedExpressions[(int)UnifiedExpressions.TongueOut].Weight = expressions[63];
+                unifiedExpressions[(int)UnifiedExpressions.TongueLeft].Weight = expressions[64];
+                unifiedExpressions[(int)UnifiedExpressions.TongueRight].Weight = expressions[65];
+                unifiedExpressions[(int)UnifiedExpressions.TongueUp].Weight = expressions[66];
+                unifiedExpressions[(int)UnifiedExpressions.TongueDown].Weight = expressions[67];
+            }
+            else
+            {
+                unifiedExpressions[(int)UnifiedExpressions.TongueOut].Weight = expressions[(int)Expressions.TongueOut];
+                unifiedExpressions[(int)UnifiedExpressions.TongueCurlUp].Weight = expressions[(int)Expressions.TongueTipAlveolar];
+            }
         }
         #endregion
     }
